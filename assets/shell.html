@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>App name</title>
+<!-- nightflight-ui starter shell. Copy tokens.css next to this file (or inline it). Replace sample content;
+     keep the structure: title bar (chrome) · sidebar · inset raised surface (list → detail) · status bar. -->
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* ── Shell ── */
+html,body{height:100%}
+body{overflow:hidden}
+.app{display:grid;grid-template-columns:var(--w-sidebar) minmax(0,1fr);grid-template-rows:var(--h-titlebar) minmax(0,1fr) var(--h-statusbar);
+  height:100vh;background:var(--chrome);transition:grid-template-columns var(--dur-regular) var(--ease)}
+.app.collapsed{grid-template-columns:0 minmax(0,1fr)}
+.app.collapsed .sidebar{visibility:hidden}
+svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* Title bar = part of the chrome (drag region for frameless desktop windows) */
+.titlebar{grid-column:1/-1;display:flex;align-items:center;gap:4px;padding:0 var(--gutter);-webkit-app-region:drag;app-region:drag}
+.titlebar button{-webkit-app-region:no-drag;app-region:no-drag}
+.tb-left{display:flex;align-items:center;gap:2px;width:calc(var(--w-sidebar) - var(--gutter));transition:width var(--dur-regular) var(--ease)}
+.app.collapsed .tb-left{width:auto}
+.tab{display:flex;align-items:center;gap:8px;height:30px;max-width:240px;padding:0 10px;border:0;border-radius:var(--r-sm);
+  background:var(--tile);color:var(--text);font-size:var(--fs-small);font-weight:var(--w-medium);white-space:nowrap}
+.tab svg{color:var(--text-3)}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;height:20px;padding:0 6px;border:var(--hairline) solid var(--line);border-radius:var(--r-xs);
+  background:var(--field);color:var(--text-2);font-size:var(--fs-mini);font-weight:var(--w-medium);white-space:nowrap}
+.chip.good{color:var(--good);background:var(--good-soft);border-color:transparent}
+.chip.warn{color:var(--warn);background:var(--warn-soft);border-color:transparent}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* Buttons */
+.icon-btn{display:inline-grid;place-items:center;width:var(--h-control);height:var(--h-control);border:0;border-radius:var(--r-sm);
+  background:transparent;color:var(--text-3);cursor:pointer;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.icon-btn:hover{background:var(--tile-hover);color:var(--text)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:var(--h-control);padding:0 12px;border:var(--hairline) solid var(--line);border-radius:var(--r);
+  background:var(--tile);color:var(--text);font-size:var(--fs-small);font-weight:var(--w-medium);cursor:pointer;transition:background var(--dur) var(--ease)}
+.btn:hover{background:var(--tile-hover)}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-hover)}
+
+/* Sidebar sits on the chrome (darkest layer) */
+.sidebar{grid-row:2/3;display:flex;flex-direction:column;gap:2px;min-width:0;overflow:auto;padding:0 12px 12px}
+.sb-head{display:flex;align-items:center;gap:4px;height:40px;margin-bottom:6px}
+.ws{display:flex;align-items:center;gap:8px;flex:1;min-width:0;height:var(--h-control);padding:0 6px;border:0;border-radius:var(--r-sm);background:none;cursor:pointer}
+.ws:hover{background:var(--tile-hover)}
+.avatar{display:grid;place-items:center;width:20px;height:20px;border-radius:var(--r-sm);background:var(--accent);color:var(--accent-ink);font-size:var(--fs-micro);font-weight:var(--w-semibold)}
+.ws b{font-size:var(--fs-small);font-weight:var(--w-semibold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav{display:flex;align-items:center;gap:8px;height:var(--h-control);padding:0 8px;border-radius:var(--r-sm);color:var(--text-2);
+  font-size:var(--fs-small);font-weight:var(--w-medium);text-decoration:none;transition:background var(--dur) var(--ease)}
+.nav svg{color:var(--text-3)}
+.nav:hover{background:var(--tile-hover);color:var(--text)}
+.nav[aria-current="page"]{background:var(--active);color:var(--text)}
+.nav[aria-current="page"] svg{color:var(--text-2)}
+.nav .count{margin-left:auto;color:var(--text-3);font-size:var(--fs-mini)}
+.group-h{display:flex;align-items:center;gap:4px;height:var(--h-control);margin-top:14px;padding:0 8px;border:0;background:none;
+  color:var(--text-3);font-size:var(--fs-small);font-weight:var(--w-medium);cursor:pointer}
+.group-h svg{width:12px;height:12px;transition:transform var(--dur) var(--ease)}
+.group-h[aria-expanded="false"] svg{transform:rotate(-90deg)}
+.sb-foot{display:flex;gap:4px;margin-top:auto;padding-top:12px}
+
+/* Work surface: raised above the chrome with a hairline + soft shadow */
+.surface{grid-row:2/3;display:grid;grid-template-rows:var(--h-header) minmax(0,1fr);min-width:0;margin-right:var(--gutter);
+  background:var(--panel);border:var(--hairline) solid var(--line-soft);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.app.collapsed .surface{margin-left:var(--gutter)}
+.view-h{display:flex;align-items:center;gap:6px;padding:0 8px 0 16px;border-bottom:var(--hairline) solid var(--line-soft)}
+.view-h h1{margin:0 6px 0 0;font-size:var(--fs-regular);font-weight:var(--w-medium)}
+.split{display:grid;grid-template-columns:390px minmax(0,1fr);min-height:0}
+.list{display:flex;flex-direction:column;gap:2px;padding:8px;overflow:auto;border-right:var(--hairline) solid var(--line-soft)}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:8px 12px;border-radius:var(--r);cursor:pointer;transition:background var(--dur) var(--ease)}
+.row:hover{background:var(--tile-hover)}
+.row[aria-selected="true"]{background:var(--active)}
+.row .t{font-size:var(--fs-regular);font-weight:var(--w-medium);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{color:var(--text-3);font-size:var(--fs-small);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .m{align-self:start;color:var(--text-3);font-size:var(--fs-mini)}
+.detail{overflow:auto;padding:32px 40px}
+.detail h2{margin:0 0 6px;font-size:var(--fs-title2);font-weight:var(--w-semibold);letter-spacing:-.4px;line-height:var(--lh-tight)}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:20px;color:var(--text-3);font-size:var(--fs-small)}
+
+/* Callout: one compact line instead of a paragraph wall */
+.callout{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;margin-bottom:16px;padding:10px 12px;border-radius:var(--r);
+  background:var(--warn-soft);border:var(--hairline) solid color-mix(in oklch,var(--warn) 35%,transparent)}
+.callout svg{color:var(--warn);margin-top:2px}
+.callout b{font-size:var(--fs-small);font-weight:var(--w-semibold)}
+.callout p{margin:0;color:var(--text-2);font-size:var(--fs-small)}
+.callout a{color:var(--warn);font-size:var(--fs-small);font-weight:var(--w-medium);text-decoration:none;white-space:nowrap}
+
+/* Tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;margin-bottom:20px}
+.tile{padding:14px 16px;background:var(--tile);border:var(--hairline) solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow);
+  transition:border-color var(--dur) var(--ease);animation:rise var(--dur-slow) var(--ease) both}
+.tile:hover{border-color:var(--line-strong)}
+.tile:nth-child(2){animation-delay:40ms}.tile:nth-child(3){animation-delay:80ms}.tile:nth-child(4){animation-delay:120ms}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}}
+.tl{display:flex;align-items:center;gap:6px;color:var(--text-2);font-size:var(--fs-small);font-weight:var(--w-medium)}
+.tl svg{color:var(--text-3)}
+.val{margin-top:8px;font-size:var(--fs-title1);font-weight:var(--w-semibold);letter-spacing:-.02em;line-height:1.1}
+.val small{margin-left:3px;color:var(--text-3);font-size:var(--fs-small);font-weight:var(--w-medium);letter-spacing:0}
+.sub{margin-top:4px;color:var(--text-3);font-size:var(--fs-small)}
+.meter{height:6px;margin-top:12px;border-radius:var(--r-full);background:var(--field);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:inherit;background:var(--accent)}
+
+/* Segmented control */
+.seg{display:inline-flex;gap:2px;padding:2px;margin-bottom:12px;background:var(--field);border:var(--hairline) solid var(--line);border-radius:var(--r)}
+.seg button{height:24px;padding:0 12px;border:0;border-radius:var(--r-sm);background:none;color:var(--text-2);font-size:var(--fs-small);font-weight:var(--w-medium);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--tile);color:var(--text);box-shadow:var(--shadow)}
+
+/* Table */
+table{width:100%;border-collapse:collapse;font-size:var(--fs-small)}
+th{height:32px;padding:0 8px;border-bottom:var(--hairline) solid var(--line);color:var(--text-3);font-size:var(--fs-mini);font-weight:var(--w-medium);text-align:left}
+td{height:36px;padding:0 8px;border-bottom:var(--hairline) solid var(--line-soft)}
+th.r,td.r{text-align:right}
+
+/* Status bar */
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;padding:0 12px;color:var(--text-3);font-size:var(--fs-mini)}
+.statusbar .good{color:var(--good)}
+
+/* Command palette — contextual first, keycaps on the right */
+.palette-bd{position:fixed;inset:0;z-index:20}
+.palette{position:fixed;z-index:21;top:96px;left:50%;width:min(720px,calc(100vw - 32px));transform:translateX(-50%);
+  background:var(--tile);border-radius:var(--r-lg);box-shadow:var(--shadow-pop);overflow:hidden;animation:pop var(--dur) var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateX(-50%) scale(.98)}}
+.palette input{width:100%;height:52px;padding:0 20px;border:0;border-bottom:var(--hairline) solid var(--line-soft);outline:0;background:none;font-size:var(--fs-regular)}
+.palette input::placeholder{color:var(--text-3)}
+.p-list{max-height:min(420px,60vh);overflow:auto;padding:4px 8px 8px}
+.p-group{padding:10px 12px 4px;color:var(--text-3);font-size:var(--fs-small)}
+.p-item{display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:var(--r);font-size:var(--fs-regular);font-weight:var(--w-medium);cursor:pointer}
+.p-item svg{color:var(--text-3)}
+.p-item .keys{display:flex;gap:4px;margin-left:auto}
+.p-item[aria-selected="true"]{background:var(--active)}
+.p-empty{padding:20px 12px;color:var(--text-3);font-size:var(--fs-small)}
+
+/* Tooltip with keycaps */
+.tip{position:fixed;z-index:30;display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:var(--r-sm);background:var(--tile);
+  box-shadow:var(--shadow-pop);color:var(--text-2);font-size:var(--fs-mini);pointer-events:none;white-space:nowrap}
+
+/* Narrow screens: sidebar off, list above detail */
+@media (max-width:760px){
+  .app{grid-template-columns:0 minmax(0,1fr)} .sidebar{visibility:hidden} .tb-left{width:auto}
+  .surface{margin:0 var(--gutter)} .split{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .list{max-height:38vh;border-right:0;border-bottom:var(--hairline) solid var(--line-soft)} .detail{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sidebar" viewBox="0 0 16 16"><rect x="2" y="2.5" width="12" height="11" rx="2"/><path d="M6 2.5v11"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 16 16"><path d="M2.5 9.5 4 3.5h8l1.5 6v3h-11z"/><path d="M2.5 9.5h3l1 1.5h3l1-1.5h3"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/></symbol>
+  <symbol id="i-list" viewBox="0 0 16 16"><path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.5M2.5 8h.5M2.5 12h.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 16 16"><path d="M3 4.5h6M12 4.5h1M3 11.5h1M7 11.5h6"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol>
+  <symbol id="i-help" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M6.5 6.5a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.7.6-.7 1.2M8 11h.01"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></symbol>
+  <symbol id="i-more" viewBox="0 0 16 16"><path d="M3.5 8h.01M8 8h.01M12.5 8h.01" stroke-width="2.2"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 16 16"><path d="M2.5 4h11M4.5 8h7M6.5 12h3"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="m3 8.5 3 3 7-7"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/></symbol>
+</svg>
+
+<div class="app" id="app">
+  <header class="titlebar">
+    <div class="tb-left">
+      <button class="icon-btn" id="sbBtn" data-tip="Toggle sidebar" data-kbd="[" aria-label="Toggle sidebar"><svg class="i"><use href="#i-sidebar"/></svg></button>
+      <span class="spacer"></span>
+      <button class="icon-btn" data-tip="Back" aria-label="Back"><svg class="i"><use href="#i-back"/></svg></button>
+      <button class="icon-btn" data-tip="Forward" aria-label="Forward"><svg class="i"><use href="#i-fwd"/></svg></button>
+    </div>
+    <button class="tab"><svg class="i"><use href="#i-inbox"/></svg><span id="tabTitle">Inbox</span></button>
+    <span class="spacer"></span>
+    <span class="chip good"><span class="dot"></span>Live</span>
+    <span class="chip mono">v1.0</span>
+    <button class="icon-btn" id="themeBtn" data-tip="Theme: system" aria-label="Switch theme"><svg class="i"><use href="#i-sun"/></svg></button>
+  </header>
+
+  <nav class="sidebar" aria-label="Main">
+    <div class="sb-head">
+      <button class="ws"><span class="avatar">AP</span><b>App name</b><svg class="i" style="width:12px;height:12px;color:var(--text-3)"><use href="#i-chev"/></svg></button>
+      <button class="icon-btn" data-tip="Command palette" data-kbd="Ctrl K" aria-label="Search" onclick="openPalette()"><svg class="i"><use href="#i-search"/></svg></button>
+      <button class="icon-btn" data-tip="Create new" data-kbd="C" aria-label="Create new"><svg class="i"><use href="#i-plus"/></svg></button>
+    </div>
+    <a class="nav" href="#" data-view="inbox" aria-current="page"><svg class="i"><use href="#i-inbox"/></svg>Inbox<span class="count">3</span></a>
+    <a class="nav" href="#" data-view="overview"><svg class="i"><use href="#i-grid"/></svg>Overview</a>
+    <a class="nav" href="#" data-view="items"><svg class="i"><use href="#i-list"/></svg>Items</a>
+    <button class="group-h" aria-expanded="true"><span>Workspace</span><svg class="i"><use href="#i-chev"/></svg></button>
+    <div>
+      <a class="nav" href="#" data-view="reports"><svg class="i"><use href="#i-clock"/></svg>Reports</a>
+      <a class="nav" href="#" data-view="archive"><svg class="i"><use href="#i-list"/></svg>Archive</a>
+    </div>
+    <div class="sb-foot">
+      <button class="icon-btn" data-tip="Help" aria-label="Help"><svg class="i"><use href="#i-help"/></svg></button>
+      <a class="nav" href="#" data-view="settings" style="flex:1"><svg class="i"><use href="#i-settings"/></svg>Settings</a>
+    </div>
+  </nav>
+
+  <main class="surface">
+    <div class="view-h">
+      <h1 id="viewTitle">Inbox</h1>
+      <button class="icon-btn" data-tip="More actions" aria-label="More actions"><svg class="i"><use href="#i-more"/></svg></button>
+      <span class="spacer"></span>
+      <button class="icon-btn" data-tip="Filter" data-kbd="F" aria-label="Filter"><svg class="i"><use href="#i-filter"/></svg></button>
+      <button class="btn primary"><svg class="i"><use href="#i-plus"/></svg>New</button>
+    </div>
+    <div class="split">
+      <div class="list" role="listbox" aria-label="Items">
+        <div class="row" role="option" aria-selected="true"><span class="avatar">A</span><div style="min-width:0"><div class="t">First record</div><div class="s">One-line summary of what this is about</div></div><span class="m">2h</span></div>
+        <div class="row" role="option" aria-selected="false"><span class="avatar" style="background:var(--violet)">B</span><div style="min-width:0"><div class="t">Second record</div><div class="s">Muted secondary line, truncated…</div></div><span class="m">1d</span></div>
+        <div class="row" role="option" aria-selected="false"><span class="avatar" style="background:var(--good)">C</span><div style="min-width:0"><div class="t">Third record</div><div class="s">Rows are soft cards, not bordered boxes</div></div><span class="m">3d</span></div>
+      </div>
+      <section class="detail">
+        <h2>First record</h2>
+        <div class="meta"><span class="chip">Draft</span><span>Updated 2h ago</span><span>·</span><span>Owner: you</span></div>
+        <div class="callout"><svg class="i"><use href="#i-alert"/></svg><div><b>One issue needs attention.</b><p>Keep warnings to a title plus one line.</p></div><a href="#">Review →</a></div>
+        <div class="seg" role="group" aria-label="Range"><button aria-pressed="true">Day</button><button aria-pressed="false">Week</button><button aria-pressed="false">Month</button></div>
+        <div class="tiles">
+          <div class="tile"><div class="tl"><svg class="i"><use href="#i-clock"/></svg>Duration</div><div class="val num">1:17<small>h</small></div><div class="sub">Finishes 13:17</div></div>
+          <div class="tile"><div class="tl"><svg class="i"><use href="#i-grid"/></svg>Total</div><div class="val num">145<small>units</small></div><div class="sub">+12 vs last week</div></div>
+          <div class="tile"><div class="tl"><svg class="i"><use href="#i-check"/></svg>Progress</div><div class="val num">68<small>%</small></div><div class="meter"><i style="width:68%"></i></div></div>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Status</th><th class="r">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Alpha</td><td><span class="chip good">Ready</span></td><td class="r num">1,240</td></tr>
+            <tr><td>Bravo</td><td><span class="chip warn">Review</span></td><td class="r num">980</td></tr>
+            <tr><td>Charlie</td><td><span class="chip">Draft</span></td><td class="r num">12</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="good">●</span><span id="status">All changes saved</span>
+    <span class="spacer"></span>
+    <span><kbd>Ctrl</kbd> <kbd>K</kbd> Command palette</span>
+  </footer>
+</div>
+
+<div id="tip" class="tip" hidden></div>
+<div id="paletteRoot" hidden>
+  <div class="palette-bd" onclick="closePalette()"></div>
+  <div class="palette" role="dialog" aria-label="Command palette">
+    <input id="pInput" placeholder="Type a command or search…" autocomplete="off" role="combobox" aria-controls="pList" aria-expanded="true">
+    <div class="p-list" id="pList" role="listbox"></div>
+  </div>
+</div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const app=$('#app'), root=document.documentElement;
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let statusT;
+function status(msg){$('#status').textContent=msg;clearTimeout(statusT);statusT=setTimeout(()=>$('#status').textContent='All changes saved',2500)}
+
+/* Theme: system → dark → light */
+const THEMES=['system','dark','light'];
+let theme=store.get('ui.theme')||'system';
+function applyTheme(t){theme=t;if(t==='system')delete root.dataset.theme;else root.dataset.theme=t;$('#themeBtn').dataset.tip='Theme: '+t;store.set('ui.theme',t)}
+applyTheme(theme);
+$('#themeBtn').onclick=()=>applyTheme(THEMES[(THEMES.indexOf(theme)+1)%THEMES.length]);
+
+/* Sidebar, groups, navigation, list selection */
+const toggleSidebar=()=>app.classList.toggle('collapsed');
+$('#sbBtn').onclick=toggleSidebar;
+$$('.group-h').forEach(b=>b.onclick=()=>{const open=b.getAttribute('aria-expanded')==='true';b.setAttribute('aria-expanded',String(!open));b.nextElementSibling.hidden=open});
+function go(view){const a=$(`.nav[data-view="${view}"]`);if(!a)return;$$('.nav').forEach(n=>n.removeAttribute('aria-current'));a.setAttribute('aria-current','page');
+  const name=a.textContent.replace(/\d+$/,'').trim();$('#viewTitle').textContent=name;$('#tabTitle').textContent=name}
+$$('.nav').forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.view)});
+$$('.row').forEach(r=>r.onclick=()=>{$$('.row').forEach(x=>x.setAttribute('aria-selected','false'));r.setAttribute('aria-selected','true');$('.detail h2').textContent=$('.t',r).textContent});
+$$('.seg button').forEach(b=>b.onclick=()=>{$$('button',b.parentElement).forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true')});
+
+/* Commands: context group first, then navigation, then app. Keys are shown as keycaps. */
+const COMMANDS=[
+  {group:'This record',icon:'i-check',label:'Mark as done',keys:['D'],run:()=>status('Marked as done')},
+  {group:'This record',icon:'i-clock',label:'Snooze…',keys:['H'],run:()=>status('Snoozed')},
+  {group:'Navigate',icon:'i-inbox',label:'Go to Inbox',keys:['G','I'],run:()=>go('inbox')},
+  {group:'Navigate',icon:'i-grid',label:'Go to Overview',keys:['G','O'],run:()=>go('overview')},
+  {group:'Navigate',icon:'i-settings',label:'Open settings',keys:['G','S'],run:()=>go('settings')},
+  {group:'App',icon:'i-plus',label:'Create new…',keys:['C'],run:()=>status('Create new…')},
+  {group:'App',icon:'i-sidebar',label:'Toggle sidebar',keys:['['],run:toggleSidebar},
+  {group:'App',icon:'i-sun',label:'Switch theme',keys:[],run:()=>$('#themeBtn').click()},
+];
+let pItems=[],pSel=0;
+function renderPalette(){
+  const q=$('#pInput').value.trim().toLowerCase();
+  pItems=COMMANDS.filter(c=>c.label.toLowerCase().includes(q));
+  pSel=Math.min(pSel,Math.max(0,pItems.length-1));
+  let html='',last='';
+  pItems.forEach((c,i)=>{if(c.group!==last){html+=`<div class="p-group">${esc(c.group)}</div>`;last=c.group}
+    html+=`<div class="p-item" role="option" data-i="${i}" aria-selected="${i===pSel}"><svg class="i"><use href="#${c.icon}"/></svg>${esc(c.label)}<span class="keys">${c.keys.map(k=>`<kbd>${esc(k)}</kbd>`).join('')}</span></div>`});
+  $('#pList').innerHTML=html||'<div class="p-empty">No matching commands</div>';
+  $('#pList [aria-selected="true"]')?.scrollIntoView({block:'nearest'});
+}
+function openPalette(){$('#paletteRoot').hidden=false;$('#pInput').value='';pSel=0;renderPalette();$('#pInput').focus()}
+function closePalette(){$('#paletteRoot').hidden=true}
+function runSelected(){const c=pItems[pSel];closePalette();c&&c.run()}
+$('#pInput').oninput=()=>{pSel=0;renderPalette()};
+$('#pInput').onkeydown=e=>{
+  if(e.key==='ArrowDown'){pSel=(pSel+1)%Math.max(1,pItems.length);renderPalette();e.preventDefault()}
+  else if(e.key==='ArrowUp'){pSel=(pSel-1+pItems.length)%Math.max(1,pItems.length);renderPalette();e.preventDefault()}
+  else if(e.key==='Enter'){runSelected();e.preventDefault()}
+  else if(e.key==='Escape'){closePalette();e.preventDefault()}
+};
+$('#pList').onmousemove=e=>{const it=e.target.closest('.p-item');if(it&&+it.dataset.i!==pSel){pSel=+it.dataset.i;renderPalette()}};
+$('#pList').onclick=e=>{if(e.target.closest('.p-item'))runSelected()};
+
+/* Global keys: Ctrl/Cmd+K palette, single keys, and G-then-X chords */
+let chord=null,chordT;
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#paletteRoot').hidden?openPalette():closePalette();return}
+  if(!$('#paletteRoot').hidden||e.ctrlKey||e.metaKey||e.altKey||e.target.closest('input,textarea,select,[contenteditable]'))return;
+  const k=e.key.toLowerCase();
+  if(chord==='g'){chord=null;({i:'inbox',o:'overview',s:'settings'})[k]&&go(({i:'inbox',o:'overview',s:'settings'})[k]);return}
+  if(k==='g'){chord='g';clearTimeout(chordT);chordT=setTimeout(()=>chord=null,900);return}
+  if(k==='['){toggleSidebar();return}
+  if(k==='c'){status('Create new…');return}
+});
+
+/* Tooltips that teach shortcuts */
+const tip=$('#tip');let tipT;
+document.addEventListener('pointerover',e=>{
+  const el=e.target.closest('[data-tip]');clearTimeout(tipT);
+  if(!el){tip.hidden=true;return}
+  tipT=setTimeout(()=>{
+    tip.innerHTML=esc(el.dataset.tip)+(el.dataset.kbd||'').split(' ').filter(Boolean).map(k=>`<kbd>${esc(k)}</kbd>`).join('');
+    tip.hidden=false;const r=el.getBoundingClientRect();
+    tip.style.left=Math.max(8,Math.min(innerWidth-tip.offsetWidth-8,r.left+r.width/2-tip.offsetWidth/2))+'px';
+    tip.style.top=(r.bottom+6)+'px';
+  },450);
+});
+document.addEventListener('pointerdown',()=>{clearTimeout(tipT);tip.hidden=true});
+</script>
+</body>
+</html>
